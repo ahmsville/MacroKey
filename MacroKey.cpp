@@ -94,7 +94,10 @@ void (*MkeyISRfunctions[])() = { Mkey1_stateChange, Mkey2_stateChange ,Mkey3_sta
 void setinterrupt() {
 	for (int i = 0; i < Mkeycount; i++) {
 		pinMode(Mkeypins[i], INPUT);
-		attachInterrupt(digitalPinToInterrupt(Mkeypins[i]), (*MkeyISRfunctions[i]), CHANGE);
+		if (i != 4) { //set int for mk 1-4
+			attachInterrupt(digitalPinToInterrupt(Mkeypins[i]), (*MkeyISRfunctions[i]), CHANGE);
+		}
+		
 	}
 	
 }
@@ -112,17 +115,18 @@ void MacroKey::initialize_macroKey() {
 
 
 int *MacroKey::get_keyPress() {
+	Key5detection();
 	for (int i = 0; i < Mkeycount; i++) {
 		if (Mkey_risetime[i] != 0 && Mkey_falltime[i] != 0) {
 			Mkey_timediff[i] = Mkey_falltime[i] - Mkey_risetime[i];
 			if (Mkey_timediff[i] > keydebounce) {
 				if (Mkey_timediff[i] < keytapthresh) {
 					keyState[i] = tap;
-					reset_macroKey(i);
+					reset_macroKeytime(i);
 				}
 				else {
 					keyState[i] = hold;
-					reset_macroKey(i);
+					reset_macroKeytime(i);
 				}
 			}
 		}
@@ -130,10 +134,15 @@ int *MacroKey::get_keyPress() {
 			Mkey_falltime[i] = millis();
 		}
 	}
-	return keyState;
+	for (int i = 0; i < Mkeycount; i++) {
+		tempkeystates[i] = keyState[i];
+		keyState[i] = nullIn;
+	}
+	
+	return tempkeystates;;
 }
 
-void MacroKey::reset_macroKey(int mkey) {
+void MacroKey::reset_macroKeytime(int mkey) {
 	Mkey_risetime[mkey] = 0;
 	Mkey_falltime[mkey] = 0;
 }
@@ -145,4 +154,40 @@ void MacroKey::reset_macroKey() {
 	
 }
 
+
+void MacroKey::Key5detection() {
+	if (digitalRead(12) == 1) {  //read first high
+		if (startedkey5detection == 0) {
+			Mkey_risetime[4] = millis(); //set risetime and continue
+			autokeyrelease[4] = Mkey_risetime[4];
+			startedkey5detection = 1;
+			//SerialUSB.println(startedkey5detection);
+		}
+		else if (startedkey5detection == 1) {
+			if ((millis() - Mkey_risetime[4]) > keydebounce) { //debounce
+				startedkey5detection = 2;
+			//	SerialUSB.println(startedkey5detection);
+			}
+		}
+		else if (startedkey5detection == 2) { //held too long
+			if ((millis() - Mkey_risetime[4]) > autoreleasethresh) {
+				Mkey_falltime[4] = millis();
+				startedkey5detection = 3;
+				//SerialUSB.println(startedkey5detection);
+			}
+		}
+
+	}
+	else { //wait for release
+		if (startedkey5detection == 2) {
+			Mkey_falltime[4] = millis();
+			startedkey5detection = 0;
+		//	SerialUSB.println(startedkey5detection);
+		}
+		else {
+			startedkey5detection = 0;
+		}
+	}
+	
+}
 
