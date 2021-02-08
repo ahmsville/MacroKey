@@ -45,6 +45,8 @@ private:
 	long keydebounce = 10; //key debounce range in millis
 	long keytapthresh = 500; //tap threshold in millis
 	int keyState[Mkeycount] = { 0,0,0,0,0 };
+	int tempkeystates[Mkeycount] = {0,0,0,0,0};
+	int startedkey5detection = 0;
 	
 public:
 
@@ -52,11 +54,11 @@ public:
 	void initialize_macroKey();
 	
 	int *get_keyPress();
-	void reset_macroKey(int mkey);
+	void reset_macroKeytime(int mkey);
 	
 	void reset_macroKey();
 	
-	
+	void Key5detection();
 
 };
 
